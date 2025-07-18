@@ -2,11 +2,32 @@ import uuid
 import happybase
 import re
 
+"""
+List HBase tables matching a filter pattern.
+
+Args:
+    str_filter (str): Regular expression to match table names.
+    hbase_conf (dict): HBase connection configuration.
+
+Returns:
+    list: List of table names matching the filter.
+"""
 
 def get_tables(str_filter, hbase_conf):
     hbase = happybase.Connection(**hbase_conf)
     return [x.decode() for x in hbase.tables() if re.match(str_filter, x.decode())]
 
+"""
+Create or retrieve an HBase table with specified column families.
+
+Args:
+    hbase (happybase.Connection): HBase connection object.
+    table_name (str): Name of the table to create/retrieve.
+    cf (dict, optional): Column families configuration. Defaults to {"cf": {}}.
+
+Returns:
+    happybase.Table: HBase table object.
+"""
 
 def __get_h_table__(hbase, table_name, cf=None):
     try:
@@ -20,6 +41,17 @@ def __get_h_table__(hbase, table_name, cf=None):
             print(e)
     return hbase.table(table_name)
 
+"""
+Save documents to HBase with specified column mapping.
+
+Args:
+    documents (list): List of document dictionaries to save.
+    h_table_name (str): Target HBase table name.
+    hbase_conf (dict): HBase connection configuration.
+    cf_mapping (list): Column family mapping, e.g., [('cf1', ['field1']), ('cf2', ['field2'])].
+    row_fields (list, optional): Fields to use for row keys. Defaults to UUID and auto-incrementing counter.
+    batch_size (int, optional): Number of rows per batch. Defaults to 1000.
+"""
 
 def save_to_hbase(documents, h_table_name, hbase_conf, cf_mapping, row_fields=None, batch_size=1000):
     hbase = happybase.Connection(**hbase_conf)
@@ -38,51 +70,12 @@ def save_to_hbase(documents, h_table_name, hbase_conf, cf_mapping, row_fields=No
         for cf, fields in cf_mapping:
             if fields == "all":
                 for c, v in d_.items():
-                    values["{cf}:{c}".format(cf=cf, c=c)] = str(v)
+                    values[f"{cf}:{c}".format(cf=cf, c=c)] = str(v)
             elif isinstance(fields, list):
                 for c in fields:
                     if c in d_:
-                        values["{cf}:{c}".format(cf=cf, c=c)] = str(d_[c])
+                        values[f"{cf}:{c}".format(cf=cf, c=c)] = str(d_[c])
             else:
-                raise Exception("Column mapping must be a list of fields or 'all'")
+                raise Exception("Column mapping must be a list of fields or 'all'\")
         h_batch.put(str(row), values)
     h_batch.send()
-
-
-def get_hbase_data_batch(hbase_conf, hbase_table, row_start=None, row_stop=None, row_prefix=None, columns=None,
-                         _filter=None, timestamp=None, include_timestamp=False, batch_size=100000,
-                         scan_batching=None, limit=None, sorted_columns=False, reverse=False):
-    if row_prefix:
-        row_start = row_prefix
-        row_stop = row_prefix[:-1] + chr(ord(row_prefix[-1]) + 1)
-
-    if limit:
-        if limit > batch_size:
-            current_limit = batch_size
-        else:
-            current_limit = limit
-    else:
-        current_limit = batch_size
-    current_register = 0
-    while True:
-        hbase = happybase.Connection(**hbase_conf)
-        table = hbase.table(hbase_table)
-        data = list(table.scan(row_start=row_start, row_stop=row_stop, columns=columns, filter=_filter,
-                               timestamp=timestamp, include_timestamp=include_timestamp, batch_size=batch_size,
-                               scan_batching=scan_batching, limit=current_limit, sorted_columns=sorted_columns,
-                               reverse=reverse))
-        if not data:
-            break
-        yield data
-        if len(data) <= 1:
-            break
-
-        last_record = data[-1][0].decode()
-        current_register += len(data)
-
-        if limit:
-            if current_register >= limit:
-                break
-            else:
-                current_limit = min(batch_size, limit - current_register)
-        row_start = last_record[:-1] + chr(ord(last_record[-1]) + 1)

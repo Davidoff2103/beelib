@@ -2,6 +2,16 @@ import json
 import os
 import re
 
+"""
+Read configuration file and return parsed data.
+
+Args:
+    conf_file (str, optional): Path to the configuration file. If not provided,
+        it will read from the environment variable 'CONF_FILE'.
+
+Returns:
+    dict: Parsed JSON configuration data with processed authentication tuples.
+"""
 
 def read_config(conf_file=None):
     if conf_file:
