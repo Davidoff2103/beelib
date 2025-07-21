@@ -8,62 +8,88 @@ from Crypto.Cipher import AES
 
 def pad(s):
     """
-    pad with spaces at the end of the text because AES needs 16 byte blocks
-    :param s:
-    :return:
+    Pad the text with spaces to make it a multiple of 16 bytes for AES encryption.
+
+    Args:
+        s (str): The input string to be padded.
+
+    Returns:
+        str: Padded string.
     """
     block_size = AES.block_size
     remainder = len(s) % block_size
     padding_needed = block_size - remainder
     return s + padding_needed * ' '
 
-
 def un_pad(s):
     """
-    remove the extra spaces at the end
-    :param s:
-    :return:
+    Remove the padding from the text after decryption.
+
+    Args:
+        s (str): The input string with padding.
+
+    Returns:
+        str: Unpadded string.
     """
     return s.rstrip()
 
-
 def encrypt(plain_text, password):
-    # generate a random salt
+    """
+    Encrypt the plain text using AES with a given password.
+
+    Args:
+        plain_text (str): The text to be encrypted.
+        password (str): The encryption password.
+
+    Returns:
+        str: Base64 encoded encrypted string.
+    """
+    # Generate a random salt
     salt = os.urandom(AES.block_size)
 
-    # generate a random iv
+    # Generate a random initialization vector (IV)
     iv = Random.new().read(AES.block_size)
 
-    # use the Scrypt KDF to get a private key from the password
+    # Use Scrypt to derive a private key from the password and salt
     private_key = hashlib.scrypt(password.encode(), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
-    # pad text with spaces to be valid for AES CBC mode
+    # Pad the text with spaces for AES CBC mode
     padded_text = pad(plain_text)
 
-    # create cipher config
+    # Create the cipher configuration
     cipher_config = AES.new(private_key, AES.MODE_CBC, iv)
-    # return string with encrypted text
-    return (base64.b64encode(cipher_config.encrypt(padded_text.encode())) + base64.b64encode(salt) + base64.b64encode(
-        iv)).decode()
 
+    # Return the base64 encoded encrypted string along with salt and IV
+    return (base64.b64encode(cipher_config.encrypt(padded_text.encode())) + 
+            base64.b64encode(salt) + 
+            base64.b64encode(iv)).decode()
 
 def decrypt(enc_str, password):
-    # decode the dictionary entries from base64
+    """
+    Decrypt the encrypted string using AES with a given password.
+
+    Args:
+        enc_str (str): The base64 encoded encrypted string.
+        password (str): The decryption password.
+
+    Returns:
+        str: Decrypted plain text.
+    """
+    # Decode the dictionary entries from base64
     iv = base64.b64decode(enc_str[-24:])
     salt = base64.b64decode(enc_str[-48:-24])
     enc = base64.b64decode(enc_str[:-48])
 
-    # generate the private key from the password and salt
+    # Generate the private key from the password and salt
     private_key = hashlib.scrypt(password.encode(), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
 
-    # create the cipher config
+    # Create the cipher configuration
     cipher = AES.new(private_key, AES.MODE_CBC, iv)
 
-    # decrypt the cipher text
+    # Decrypt the cipher text
     decrypted = cipher.decrypt(enc)
 
-    # un pad the text to remove the added spaces
+    # Unpad the text to remove the added spaces
     original = un_pad(decrypted)
 
     return original.decode('utf-8')
-
