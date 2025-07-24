@@ -85,7 +85,7 @@ def save_to_neo4j(g, config):
     content = __transform_to_str__(g)
     neo = GraphDatabase.driver(**config['neo4j'])
     with neo.session() as s:
-        response = s.run(f\"\"\"CALL n10s.rdf.import.inline('{content}','Turtle')\"\"\")
+        response = s.run(f"""CALL n10s.rdf.import.inline('{content}','Turtle')""")
         print(response.single())
 
 def print_graph(g, config):
