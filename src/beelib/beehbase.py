@@ -4,17 +4,38 @@ import re
 
 
 def get_tables(str_filter, hbase_conf):
+    """
+    Get tables from HBase that match the filter.
+
+    Args:
+        str_filter (str): Filter pattern for table names.
+        hbase_conf (dict): Configuration for connecting to HBase.
+
+    Returns:
+        list: List of table names matching the filter.
+    """
     hbase = happybase.Connection(**hbase_conf)
     return [x.decode() for x in hbase.tables() if re.match(str_filter, x.decode())]
 
 
 def __get_h_table__(hbase, table_name, cf=None):
+    """
+    Get or create an HBase table.
+
+    Args:
+        hbase (happybase.Connection): HBase connection object.
+        table_name (str): Name of the table.
+        cf (dict, optional): Column family configuration.
+
+    Returns:
+        happybase.Table: HBase table object.
+    """
     try:
         if not cf:
             cf = {"cf": {}}
         hbase.create_table(table_name, cf)
     except Exception as e:
-        if str(e.__class__) == "<class 'Hbase_thrift.AlreadyExists'>":
+        if str(e.__class__) == "\u003cclass 'Hbase_thrift.AlreadyExists'\u003e":
             pass
         else:
             print(e)
@@ -22,6 +43,20 @@ def __get_h_table__(hbase, table_name, cf=None):
 
 
 def save_to_hbase(documents, h_table_name, hbase_conf, cf_mapping, row_fields=None, batch_size=1000):
+    """
+    Save documents to HBase.
+
+    Args:
+        documents (list): List of documents to save.
+        h_table_name (str): Name of the HBase table.
+        hbase_conf (dict): Configuration for connecting to HBase.
+        cf_mapping (dict): Mapping of column families and fields.
+        row_fields (list, optional): Fields to use for row keys.
+        batch_size (int, optional): Number of documents per batch.
+
+    Returns:
+        None
+    """
     hbase = happybase.Connection(**hbase_conf)
     table = __get_h_table__(hbase, h_table_name, {cf: {} for cf, _ in cf_mapping})
     h_batch = table.batch(batch_size=batch_size)
@@ -52,6 +87,28 @@ def save_to_hbase(documents, h_table_name, hbase_conf, cf_mapping, row_fields=No
 def get_hbase_data_batch(hbase_conf, hbase_table, row_start=None, row_stop=None, row_prefix=None, columns=None,
                          _filter=None, timestamp=None, include_timestamp=False, batch_size=100000,
                          scan_batching=None, limit=None, sorted_columns=False, reverse=False):
+    """
+    Get data from HBase in batches.
+
+    Args:
+        hbase_conf (dict): Configuration for connecting to HBase.
+        hbase_table (str): Name of the HBase table.
+        row_start (str, optional): Start row key.
+        row_stop (str, optional): End row key.
+        row_prefix (str, optional): Prefix for rows.
+        columns (list, optional): Columns to retrieve.
+        _filter (str, optional): Filter expression.
+        timestamp (int, optional): Timestamp for data.
+        include_timestamp (bool, optional): Include timestamp in results.
+        batch_size (int, optional): Number of rows per batch.
+        scan_batching (bool, optional): Enable scan batching.
+        limit (int, optional): Maximum number of rows to return.
+        sorted_columns (bool, optional): Sort columns.
+        reverse (bool, optional): Reverse the order of results.
+
+    Yields:
+        list: Batch of data from HBase.
+    """
     if row_prefix:
         row_start = row_prefix
         row_stop = row_prefix[:-1] + chr(ord(row_prefix[-1]) + 1)
