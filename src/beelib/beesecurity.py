@@ -60,8 +60,8 @@ def encrypt(plain_text, password):
     cipher_config = AES.new(private_key, AES.MODE_CBC, iv)
 
     # Return the base64 encoded encrypted string along with salt and IV
-    return (base64.b64encode(cipher_config.encrypt(padded_text.encode())) + 
-            base64.b64encode(salt) + 
+    return (base64.b64encode(cipher_config.encrypt(padded_text.encode())) +
+            base64.b64encode(salt) +
             base64.b64encode(iv)).decode()
 
 def decrypt(enc_str, password):
