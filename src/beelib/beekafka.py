@@ -65,6 +65,7 @@ def __plain_decoder_encoder(v):
     """
     return v
 
+
 def create_kafka_producer(kafka_conf, encoding="JSON", **kwargs):
     """
     Create a Kafka producer with specified encoding.
@@ -87,6 +88,7 @@ def create_kafka_producer(kafka_conf, encoding="JSON", **kwargs):
         raise NotImplementedError("Unknown encoding")
     servers = [f"{kafka_conf['host']}:{kafka_conf['port']}"]
     return KafkaProducer(bootstrap_servers=servers, value_serializer=encoder, **kwargs)
+
 
 def create_kafka_consumer(kafka_conf, encoding="JSON", **kwargs):
     """
@@ -111,6 +113,7 @@ def create_kafka_consumer(kafka_conf, encoding="JSON", **kwargs):
 
     servers = [f"{kafka_conf['host']}:{kafka_conf['port']}"]
     return KafkaConsumer(bootstrap_servers=servers, value_deserializer=decoder, **kwargs)
+
 
 def send_to_kafka(producer, topic, key, data, **kwargs):
     """
