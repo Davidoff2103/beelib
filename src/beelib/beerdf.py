@@ -4,6 +4,16 @@ import rdflib
 
 
 def __get_namespaced_fields__(field, context):
+    """
+    Get the namespaced field value.
+
+    Args:
+        field (str): Field name.
+        context (dict): Context dictionary containing namespace information.
+
+    Returns:
+        str or None: The namespaced field value or None if not found.
+    """
     split_type = field.split("__")
     if len(split_type) > 2 or len(split_type) < 2:
         return None
@@ -12,6 +22,16 @@ def __get_namespaced_fields__(field, context):
 
 
 def create_rdf_from_neo4j(neo4j_graph, context):
+    """
+    Create RDF graph from Neo4j data.
+
+    Args:
+        neo4j_graph (Graph): Neo4j graph object.
+        context (dict): Context dictionary containing namespace information.
+
+    Returns:
+        graph: RDF graph in TTL format.
+    """
     context_ns = {}
     for c in context.nodes:
         for k, v in c.items():
@@ -71,6 +91,16 @@ def create_rdf_from_neo4j(neo4j_graph, context):
 
 
 def get_rdf_with_cyper_query(query, connection):
+    """
+    Get RDF graph from Neo4j using Cypher query.
+
+    Args:
+        query (str): Cypher query string.
+        connection (dict): Connection configuration for Neo4j.
+
+    Returns:
+        graph: RDF graph in TTL format.
+    """
     driver = GraphDatabase.driver(**connection)
     with driver.session() as session:
         users = session.run(
@@ -83,5 +113,16 @@ def get_rdf_with_cyper_query(query, connection):
 
 
 def serialize_with_cyper_query(query, connection, format):
+    """
+    Serialize RDF graph from Neo4j using Cypher query.
+
+    Args:
+        query (str): Cypher query string.
+        connection (dict): Connection configuration for Neo4j.
+        format (str): Output format (e.g., 'turtle').
+
+    Returns:
+        str: Serialized RDF graph as a string.
+    """
     g = get_rdf_with_cyper_query(query, connection)
     return g.serialize(format=format)
