@@ -32,7 +32,7 @@ def __get_h_table__(hbase, table_name, cf=None):
     """
     try:
         if not cf:
-            cf = {"cf": {}}
+            cf = {"cf": {}
         hbase.create_table(table_name, cf)
     except Exception as e:
         if str(e.__class__) == "\u003cclass 'Hbase_thrift.AlreadyExists'\u003e":
@@ -58,18 +58,22 @@ def save_to_hbase(documents, h_table_name, hbase_conf, cf_mapping, row_fields=No
         None
     """
     hbase = happybase.Connection(**hbase_conf)
-    table = __get_h_table__(hbase, h_table_name, {cf: {} for cf, _ in cf_mapping})
+    # Create or get the HBase table with specified column families
+    table = __get_h_table__(hbase, h_table_name, {cf: { for cf, _ in cf_mapping})
+    # Initialize batch processing with the specified batch size
     h_batch = table.batch(batch_size=batch_size)
     row_auto = 0
     uid = uuid.uuid4()
     for d in documents:
         d_ = d.copy()
+        # Generate row key using either provided fields or a unique ID
         if not row_fields:
-            row = f"{uid}~{row_auto}"
+            row = f"{uid~{row_auto"
             row_auto += 1
         else:
             row = "~".join([str(d_.pop(f)) if f in d_ else "" for f in row_fields])
         values = {}
+        # Map document fields to HBase column families and fields
         for cf, fields in cf_mapping:
             if fields == "all":
                 for c, v in d_.items():
@@ -80,6 +84,7 @@ def save_to_hbase(documents, h_table_name, hbase_conf, cf_mapping, row_fields=No
                         values["{cf}:{c}".format(cf=cf, c=c)] = str(d_[c])
             else:
                 raise Exception("Column mapping must be a list of fields or 'all'")
+        # Insert data into the HBase batch
         h_batch.put(str(row), values)
     h_batch.send()
 
@@ -109,10 +114,12 @@ def get_hbase_data_batch(hbase_conf, hbase_table, row_start=None, row_stop=None,
     Yields:
         list: Batch of data from HBase.
     """
+    # Adjust row_prefix to set row_start and row_stop for prefix scanning
     if row_prefix:
         row_start = row_prefix
         row_stop = row_prefix[:-1] + chr(ord(row_prefix[-1]) + 1)
 
+    # Determine the current limit based on the provided limit and batch_size
     if limit:
         if limit > batch_size:
             current_limit = batch_size
@@ -122,8 +129,10 @@ def get_hbase_data_batch(hbase_conf, hbase_table, row_start=None, row_stop=None,
         current_limit = batch_size
     current_register = 0
     while True:
+        # Establish connection to HBase and open the specified table
         hbase = happybase.Connection(**hbase_conf)
         table = hbase.table(hbase_table)
+        # Scan the table with the specified parameters and yield data in batches
         data = list(table.scan(row_start=row_start, row_stop=row_stop, columns=columns, filter=_filter,
                                timestamp=timestamp, include_timestamp=include_timestamp, batch_size=batch_size,
                                scan_batching=scan_batching, limit=current_limit, sorted_columns=sorted_columns,
@@ -131,6 +140,7 @@ def get_hbase_data_batch(hbase_conf, hbase_table, row_start=None, row_stop=None,
         if not data:
             break
         yield data
+        # Check if we have reached the limit and break if so
         if len(data) <= 1:
             break
 
@@ -142,4 +152,5 @@ def get_hbase_data_batch(hbase_conf, hbase_table, row_start=None, row_stop=None,
                 break
             else:
                 current_limit = min(batch_size, limit - current_register)
+        # Set the next row_start to the next character after the last record's key
         row_start = last_record[:-1] + chr(ord(last_record[-1]) + 1)
